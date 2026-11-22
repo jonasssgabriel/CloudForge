@@ -70,7 +70,7 @@ Fatorial 0 e 5000 estão previstos, negativos e maiores que 5000 são rejeitados
 
 Compilação feita somente nas cópias `antes` e `depois`, em:
 
-`C:\Users\jonas\AppData\Local\Temp\claude\a569e9ea38466a80\1f28421d-6800-4a29-a51b-753f517d4dfd\scratchpad\astra`
+`(pasta temporária de testes)`
 
 Os três `mvn -q package` e `mvn -q dependency:build-classpath "-Dmdep.outputFile=target\cp.txt"` terminaram com código 0 na versão testada. JAVA_HOME apontou para `C:\Program Files\Apache NetBeans\jdk`; Maven veio de `C:\Program Files\Apache NetBeans\java\maven\bin`. A primeira cópia da GUI em edição apresentou `Animador.java:76 illegal forward reference`; uma nova leitura do arquivo já corrigido pelo outro agente permitiu compilar o cliente completo. Não alterei arquivos da GUI para resolver isso.
 
