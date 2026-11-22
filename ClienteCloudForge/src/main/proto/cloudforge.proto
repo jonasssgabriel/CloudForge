@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package cloudforge;
+
+
+option java_multiple_files = true;
+option java_package = "com.mycompany.cloudforge";
+
+service CloudForgeService {
+  rpc ExecutarTarefa(TarefaRequest) returns (TarefaResponse);
+  rpc ObterEstatisticas(Vazio) returns (Estatisticas);
+  rpc ObterHistorico(Vazio) returns (Historico);
+}
+
+// Vazio vem de nomes.proto (mesmo pacote cloudforge).
+import "nomes.proto";
+
+enum TipoTarefa {
+  CALCULO = 0;              // fatorial de N (BigInteger, N <= 5000)
+  PROCESSAMENTO_DADOS = 1;  // soma, média, mínimo, máximo e lista ordenada
+  HASH = 2;                 // SHA-256 em hexadecimal
+}
+
+message TarefaRequest {
+  TipoTarefa tipo = 1;
+  string entrada = 2;
+  string cliente = 3;
+}
+
+message TarefaResponse {
+  int64 idTarefa = 1;
+  string instancia = 2;                    // qual instância respondeu (ex.: srv-50051)
+  string resultado = 3;
+  int64 duracaoMs = 4;
+  int64 totalProcessadoNaInstancia = 5;
+}
+
+message Estatisticas {
+  string instancia = 1;
+  int64 recebidas = 2;
+  int64 concluidas = 3;
+  int64 rejeitadas = 4;
+  int32 emAndamento = 5;
+  int32 limiteSimultaneas = 6;
+}
+
+message RegistroHistorico {
+  int64 idTarefa = 1;
+  TipoTarefa tipo = 2;
+  string cliente = 3;
+  int64 duracaoMs = 4;
+  string horario = 5;
+}
+
+message Historico {
+  string instancia = 1;
+  repeated RegistroHistorico registros = 2;
+}
