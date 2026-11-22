@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/img/logo/horizontal-1200.png" alt="CloudForge" width="420">
+
 # CloudForge · gRPC
 
 Processamento distribuído em nuvem: várias instâncias de um servidor, um serviço de nomes e um cliente que escolhe a instância.<br>O cliente descobre os servidores, confere a saúde de cada um antes de cada chamada e faz o rodízio na mão.
