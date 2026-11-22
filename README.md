@@ -93,7 +93,16 @@ cd CloudForge
 
 Os scripts de servidor repassam argumentos extras: `02-servidor-50051.bat --global --limite=2`. Ordem normal: `00`, `01`, `02`, `03` e por fim `04` ou `06`.
 
-**Pelo NetBeans:** `File › Open Project…` nos três projetos e `Clean and Build` em cada um (a primeira vez baixa as dependências e gera as classes do `.proto`). Depois, `Run File` em `ServicoNomes.java`, em `ServidorCloudForge.java` (para a segunda instância, a porta vai em `Project Properties › Run › Arguments`, ou use o script `03`) e em `ClienteGUI.java` (tela) ou `ClienteCloudForge.java` (console).
+**Pelo NetBeans** (testado: tudo roda dentro da IDE, sem script). `File › Open Project…` e abra as três pastas (`ServicoNomes`, `ServidorCloudForge`, `ClienteCloudForge`). Na primeira vez o Maven baixa as dependências e gera as classes do `.proto`. Depois, nesta ordem:
+
+| Passo | Como fazer no NetBeans | Resultado |
+|---|---|---|
+| 1. Serviço de nomes | Selecione `ServicoNomes` e clique no botão verde **Run** (ou clique direito › Run) | Aba de saída: `[NOMES] Serviço de nomes ouvindo na porta 50050` |
+| 2. Servidor, instância 1 | Selecione `ServidorCloudForge` e clique em **Run** | `[srv-50051] no ar na porta 50051` e `registrado em localhost:50050` |
+| 3. Servidor, instância 2 | Clique direito em `ServidorCloudForge` › **Run Maven** › **Servidor porta 50052** | `[srv-50052] no ar na porta 50052` |
+| 4. Cliente gráfico | Selecione `ClienteCloudForge` e clique em **Run** | Abre a tela com as duas instâncias SERVING |
+
+O cliente de console também roda pelo NetBeans: abra `ClienteCloudForge.java` e use clique direito › **Run File**. Os comandos do servidor (`serving`, `notserving`, `atraso`, `limite`...) são digitados na aba de saída do próprio NetBeans. As portas dos passos 2 e 3 vêm do arquivo `ServidorCloudForge/nbactions.xml`, que cria as ações "Servidor porta 50051" e "Servidor porta 50052" no menu Run Maven.
 
 **Pela linha de comando**, sem script (na pasta do projeto):
 
