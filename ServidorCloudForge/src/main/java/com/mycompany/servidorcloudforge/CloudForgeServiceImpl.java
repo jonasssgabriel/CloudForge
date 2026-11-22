@@ -58,13 +58,19 @@ public class CloudForgeServiceImpl extends CloudForgeServiceGrpc.CloudForgeServi
     public CloudForgeServiceImpl(String id, int limite, boolean global,
             NomesServiceGrpc.NomesServiceBlockingStub nomes) {
         this.id = id;
-        this.limite = limite;
+        setLimite(limite);
         this.global = global;
         this.nomes = nomes;
     }
 
-    public void setAtrasoMs(long ms) { this.atrasoMs = ms; }
-    public void setLimite(int n) { this.limite = n; }
+    public void setAtrasoMs(long ms) {
+        if (ms < 0) throw new IllegalArgumentException("atraso não pode ser negativo");
+        this.atrasoMs = ms;
+    }
+    public void setLimite(int n) {
+        if (n <= 0) throw new IllegalArgumentException("limite deve ser positivo");
+        this.limite = n;
+    }
 
     @Override
     public void executarTarefa(TarefaRequest req, StreamObserver<TarefaResponse> obs) {
@@ -257,10 +263,12 @@ public class CloudForgeServiceImpl extends CloudForgeServiceGrpc.CloudForgeServi
     }
 
     private double[] lerNumeros(String entrada) {
-        String[] partes = entrada.split(",");
+        // Preserva campos vazios no final: "1," e "," devem ser entrada inválida.
+        String[] partes = entrada.split(",", -1);
         double[] v = new double[partes.length];
         for (int i = 0; i < partes.length; i++) {
             v[i] = Double.parseDouble(partes[i].trim()); // aceita decimais
+            if (!Double.isFinite(v[i])) throw new NumberFormatException("número não finito");
         }
         return v;
     }

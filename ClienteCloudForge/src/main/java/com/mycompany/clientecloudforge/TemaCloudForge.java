@@ -21,6 +21,7 @@ public final class TemaCloudForge {
     public static final Color S2 = new Color(0xEC, 0xED, 0xEB);
     public static final Color S3 = new Color(0xE2, 0xE4, 0xE3);
     public static final Color LINE = new Color(0xD2, 0xD5, 0xD3);
+    public static final Color DIVIDER = new Color(0x15, 0x15, 0x15, 18); // 7% de opacidade
     public static final Color FG = new Color(0x15, 0x15, 0x15);
     public static final Color MUTE = new Color(0x5C, 0x69, 0x62);
     public static final Color ACCENT = new Color(0x4F, 0x5F, 0xD6);
@@ -29,11 +30,29 @@ public final class TemaCloudForge {
     public static final Color WARN = new Color(0x9A, 0x62, 0x12);
     public static final Color BAD = new Color(0xB0, 0x26, 0x1E);
 
+    // Cores das instâncias (ajustadas para contraste WCAG AA >= 4,5:1 sobre claro e com texto branco)
     public static final Color[] CORES_INSTANCIA = {
-        new Color(0x4F, 0x5F, 0xD6),
-        new Color(0x1B, 0x8A, 0xA8),
-        new Color(0xB0, 0x7A, 0x1A)
+        new Color(0x4F, 0x5F, 0xD6), // índigo (acento principal)
+        new Color(0x12, 0x6C, 0x85), // ciano petróleo (AA: 5,83:1 em S1, 5,98:1 com branco)
+        new Color(0x8A, 0x5B, 0x0E)  // âmbar escuro (AA: 5,71:1 em S1, 5,86:1 com branco)
     };
+
+    // Versão mais profunda para textos e rótulos sobre fundos levemente tingidos (log e pacotes)
+    public static final Color[] CORES_INSTANCIA_TEXTO = {
+        new Color(0x3B, 0x49, 0xB8), // índigo escuro (AA: 5,99:1 mesmo com fundo tingido)
+        new Color(0x0F, 0x64, 0x7B), // ciano escuro (AA: 5,10:1 mesmo com fundo tingido)
+        new Color(0x7D, 0x52, 0x0B)  // âmbar profundo (AA: 5,60:1 mesmo com fundo tingido)
+    };
+
+    public static Color corInstancia(int indice) {
+        int i = Math.floorMod(indice, CORES_INSTANCIA.length);
+        return CORES_INSTANCIA[i];
+    }
+
+    public static Color corTextoInstancia(int indice) {
+        int i = Math.floorMod(indice, CORES_INSTANCIA_TEXTO.length);
+        return CORES_INSTANCIA_TEXTO[i];
+    }
 
     private static Font baseSans;
     private static Font baseMono;
@@ -93,7 +112,7 @@ public final class TemaCloudForge {
     }
 
     private static void carregarFontes() {
-        baseSans = new Font("Segoe UI", Font.PLAIN, 13);
+        baseSans = carregarRecurso("/fontes/Inter-Regular.ttf", new Font("Segoe UI", Font.PLAIN, 13));
         baseMono = carregarRecurso("/fontes/AtkinsonHyperlegibleMono-Regular.ttf", new Font("Consolas", Font.PLAIN, 13));
         baseSerif = carregarRecurso("/fontes/InstrumentSerif-Italic.ttf", new Font("Georgia", Font.ITALIC, 28));
     }
@@ -129,6 +148,12 @@ public final class TemaCloudForge {
 
     public static Font serifItalic(float tamanho) {
         return baseSerif.deriveFont(Font.ITALIC, tamanho);
+    }
+
+    /** Curva ease-out cúbica para transições suaves. */
+    public static double easeOut(double t) {
+        double k = Math.max(0.0, Math.min(1.0, t));
+        return 1.0 - Math.pow(1.0 - k, 3);
     }
 
     /** Interpola suavemente entre duas cores para crossfade. */

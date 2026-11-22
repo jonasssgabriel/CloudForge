@@ -76,6 +76,14 @@ public class ServidorCloudForge {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             encerrar();
             server.shutdown();
+            try {
+                if (!server.awaitTermination(3, TimeUnit.SECONDS)) server.shutdownNow();
+            } catch (InterruptedException e) {
+                server.shutdownNow();
+                Thread.currentThread().interrupt();
+            } finally {
+                canalNomes.shutdownNow();
+            }
         }));
 
         iniciarConsole(impl, server);
@@ -91,12 +99,13 @@ public class ServidorCloudForge {
     // Executa uma vez só (o hook e o comando 'sair' podem chamar os dois)
     private static void encerrar() {
         if (!encerrado.compareAndSet(false, true)) return;
+        // Para de anunciar prontidão antes do desregistro, que pode esperar pela rede.
+        definirHealth(ServingStatus.NOT_SERVING);
         try {
             nomes.withDeadlineAfter(2, TimeUnit.SECONDS).desregistrar(eu);
         } catch (Exception e) {
             System.out.println("aviso: não consegui desregistrar (" + e.getMessage() + ")");
         }
-        definirHealth(ServingStatus.NOT_SERVING);
     }
 
     private static void iniciarConsole(CloudForgeServiceImpl impl, Server server) {

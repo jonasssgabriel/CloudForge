@@ -60,7 +60,9 @@ public class ClienteCloudForge {
         ClienteCore.ResumoConcorrencia r = core.concorrencia(numero(p, "concorrencia"));
         System.out.printf("Enviadas: %d, concluídas: %d, rejeitadas: %d, outras falhas: %d%n", r.enviadas(), r.concluidas(), r.rejeitadas(), r.outrasFalhas());
         System.out.println("IDs de tarefa repetidos por instância: " + r.idsRepetidos());
-        System.out.println("Soma concluídas nas instâncias (delta): " + r.somaConcluidasInstancias() + " — " + (r.confere() ? "OK" : "ALERTA"));
+        System.out.println("Soma concluídas nas instâncias (delta): " + (r.somaConcluidasInstancias() < 0
+                ? "indisponível - INCONCLUSIVO (instância sem amostra comparável)"
+                : r.somaConcluidasInstancias() + " - " + (r.confere() ? "OK" : "ALERTA")));
     }
     private static int numero(String[] p, String comando) {
         try { int n = Integer.parseInt(p[1]); return Math.max(0, n); }

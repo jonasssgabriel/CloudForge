@@ -233,3 +233,22 @@ Sem `synchronized` o contador perdeu cerca de 85% das atualizações; com ele o 
 - Nenhuma porta de servidor fixa no cliente: `grep -rnE "5005[1-9]" ClienteCloudForge/src/main/java` não retorna nada. A única porta no código é a do serviço de nomes (`localhost:50050`), o endereço conhecido que o enunciado permite e que pode ser trocado por argumento.
 - `synchronized` no servidor só envolve atualização curta de contadores e histórico (`CloudForgeServiceImpl`); o `Thread.sleep` e o processamento ficam fora do lock.
 - No cliente o único `synchronized` do rodízio é `avancarIndice` (`ClienteCore`); o `Health.Check` roda fora do lock.
+
+## Repetição final dos testes (22/11/2026)
+
+Depois da revisão do código e da integração da tela (eventos reais, canais com contagem de uso), os três projetos foram recompilados com `scripts -compilar-tudo.bat` e a bateria foi repetida com processos Java reais (nomes 50050, servidores 50051 e 50052, cliente de console). Resultado:
+
+| Teste | Resultado |
+|---|---|
+| T2/T3 `rr 6` | Alternou entre `srv-50052` e `srv-50051`; as duas geraram `Tarefa #1` (estado local) |
+| T4 NOT_SERVING e `serving` | `pulado (NOT_SERVING)` e depois a instância voltou ao rodízio |
+| T5 instância encerrada | `pulado (erro: UNAVAILABLE)` e o cliente seguiu com a outra |
+| T6 nenhuma saudável | `Nenhum servidor saudável no momento. Tente novamente.` |
+| T7 `atraso 7000` | `DEADLINE_EXCEEDED ... Tentando o próximo servidor saudável.` e a tarefa foi refeita na outra instância |
+| T8a `concorrencia 200` | Enviadas 200, concluídas 200, rejeitadas 0, ids repetidos 0, soma confere |
+| T8b `limite 2` e `concorrencia 200` | Enviadas 200, concluídas 189, rejeitadas 11, ids repetidos 0, soma confere |
+| Entradas inválidas | `Entrada inválida: confira os dados informados.` sem tentar outro servidor |
+| `CALCULO 5000` | Aceito (BigInteger, 16326 dígitos) |
+| Bônus `--global` | `Total global: 10`, com os registros de cada instância |
+
+Na GUI, os mesmos cenários foram conferidos por captura de tela (`docs/img/`): alternância 1, 2, 1, 2; instância em NOT_SERVING; concorrência com 50 tarefas (46 concluídas, 4 rejeitadas, 0 repetidos, "soma confere"); `atraso 6500` com DEADLINE_EXCEEDED em 5014 ms e segunda tentativa na outra instância; instância encerrada de verdade. Também foi verificado que o callback de eventos nunca roda com a trava da lista (`Thread.holdsLock` falso) e que cada par instância + id de tarefa dos eventos existe no histórico real do servidor.

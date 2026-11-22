@@ -207,7 +207,7 @@ Nenhuma porta de servidor está fixa no cliente. A única coisa fixa é o endere
 | Decisão | Por quê | O que quebraria sem ela |
 |---|---|---|
 | Um `ManagedChannel` e os stubs (CloudForge e Health) por servidor, criados **uma vez** | Abrir canal é caro; o gRPC multiplexa chamadas no mesmo canal | Latência e conexões a cada chamada |
-| Só `avancarIndice()` é `synchronized` | O índice é estado compartilhado entre threads do cliente, mas é uma região crítica curta | Duas threads receberiam o mesmo servidor |
+| `synchronized` só em blocos curtos sobre a lista e o índice (`avancarIndice`, `reservarServidores`, `liberarServidores`, troca da lista em `atualizar`) | O índice e a lista de canais são estado compartilhado entre threads do cliente; a contagem de uso impede fechar um canal que ainda está em uso | Duas threads receberiam o mesmo servidor, ou um `atualizar` fecharia o canal no meio de uma chamada |
 | `Health.Check` **fora** do lock | É chamada de rede; dentro do lock, todas as requisições do cliente seriam atendidas uma de cada vez | O cliente inteiro travaria atrás de um servidor lento |
 | Health Check antes de **cada** requisição, com deadline de 2 s | Pede o enunciado, e pega o servidor que acabou de cair | Mandaria tarefa para instância NOT_SERVING |
 | Uma segunda tentativa no próximo servidor saudável | As tarefas são idempotentes (mesma entrada, mesmo resultado), então repetir é seguro | Uma falha pontual viraria erro para o usuário |
@@ -291,9 +291,32 @@ message TarefaResponse {
 
 ### Cliente gráfico
 
-A tela Swing (tema claro) usa o mesmo `ClienteCore` do console, então o round-robin e o Health Check são os mesmos. Ela tem a tabela de instâncias com saúde ao vivo (atualiza a cada 3 s), a **topologia animada** (cada requisição viaja do cliente até a instância escolhida; instância fora do rodízio recebe um pacote que volta), a linha do tempo do rodízio, o formulário de tarefa, o log colorido e o botão **Executar demonstração**, que roda sozinho `rr 6`, uma pausa, `concorrencia 50` e a conferência no fim. Atalhos: `Enter` envia, `Ctrl+L` limpa o log. Clique num nó da topologia para ver as estatísticas e as últimas tarefas da instância.
+A tela Swing (tema claro) usa o mesmo `ClienteCore` do console, então o round-robin e o Health Check são os mesmos. Tudo que aparece vem de eventos reais do cliente, sem dado inventado para animar:
 
-Classes: `ClienteGUI` (main), `TelaCloudForge`, `PainelTopologia`, `PainelInstancias`, `PainelRodizio`, `PainelLog` e `TemaCloudForge`. Valores de cor e fonte ficam em `TemaCloudForge`.
+| Parte da tela | O que mostra |
+|---|---|
+| Instâncias | Tabela com saúde (SERVING, NOT_SERVING, fora do ar), tarefas em andamento, sparkline de latência, OK e rejeitadas |
+| Topologia | Cliente, serviço de nomes e instâncias. Um anel "H" marca cada Health.Check e o pacote real percorre a ligação até a instância escolhida; instância fora do rodízio fica esmaecida |
+| Rodízio | Sequência das últimas requisições (1, 2, 1, 2) com legenda das portas |
+| Trilha por requisição | Uma linha por requisição: `R01 · t1 srv-50051 · Health SERVING 2 ms · tarefa DEADLINE_EXCEEDED 5014 ms · t2 srv-50052 · Health SERVING 2 ms · tarefa OK 0 ms #37` |
+| Prazos ao vivo | Barras de deadline do Health Check (2 s) e da tarefa (5 s), com estouro, "tentando o próximo" e "pulado" |
+| Estado local por instância | O `#id` de cada instância, mostrando que duas instâncias têm `#6` ao mesmo tempo (memórias independentes), mais o total do histórico global (bônus) |
+| Concorrência | Resumo real: enviadas, concluídas, rejeitadas, ids repetidos e "soma confere". Se uma instância cair no meio, o resultado é "inconclusivo" |
+| Roteiro de falhas | Faixa recolhível com os comandos reais dos consoles (`notserving`, `serving`, `atraso 6500`, `atraso 0`) |
+
+Atalhos: `Enter` envia, `Ctrl+K` foca a entrada, `Ctrl+R` alterna 6, `Ctrl+L` limpa o log e `Ctrl+M` reduz as animações. O botão **Executar demonstração** roda sozinho o rodízio, a concorrência e a conferência, com legenda ao vivo. Um único `Timer` (`Animador`) cuida de todas as animações.
+
+Classes: `ClienteGUI` (main), `TelaCloudForge`, `PainelTopologia`, `PainelInstancias`, `PainelRodizio`, `PainelPrazo`, `PainelEstadoLocal`, `PainelResumoConcorrencia`, `PainelLog`, `PainelToast`, `BotaoAnimado`, `Animador` e `TemaCloudForge`. Valores de cor e fonte ficam em `TemaCloudForge`.
+
+<details>
+<summary>Mais telas (deadline com retry, concorrência, instância fora do rodízio, janela de 1000 px)</summary>
+
+![Deadline estourado e segunda tentativa](docs/img/gui-deadline-retry.png)
+![Concorrência com 50 tarefas](docs/img/gui-concorrencia.png)
+![Instância em NOT_SERVING](docs/img/gui-not-serving.png)
+![Janela de 1000 px](docs/img/gui-1000px.png)
+
+</details>
 
 ## Roteiro de testes
 
@@ -311,7 +334,7 @@ Classes: `ClienteGUI` (main), `TelaCloudForge`, `PainelTopologia`, `PainelInstan
 | 9 | Estado local × global | As duas geram `#1` | ✅ `stats` e as respostas mostram `Tarefa #1` em cada instância |
 | 10 | Corrida: `CorridaDemo` | Sem lock perde, com lock não | ✅ esperado 800000; sem `synchronized` 127027; com `synchronized` 800000 |
 
-Todos foram rodados com processos Java reais (nomes, servidores e cliente separados, chamadas gRPC de verdade, sem mock). A saída completa de cada um está em [`docs/EVIDENCIAS.md`](docs/EVIDENCIAS.md).
+Todos foram rodados com processos Java reais (nomes, servidores e cliente separados, chamadas gRPC de verdade, sem mock). Depois da revisão final (cliente com eventos, canais com contagem de uso e a tela nova) a bateria inteira foi repetida e passou de novo. A saída de cada teste está em [`docs/EVIDENCIAS.md`](docs/EVIDENCIAS.md) e os bugs achados e corrigidos na revisão, com antes e depois, em [`docs/EVIDENCIAS-REVISAO.md`](docs/EVIDENCIAS-REVISAO.md).
 
 **Teste da corrida.** No projeto `ServidorCloudForge`, `CorridaDemo` roda 8 threads x 100000 incrementos, primeiro sem e depois com `synchronized`:
 
@@ -355,7 +378,7 @@ Com `--global`, o servidor, depois de concluir cada tarefa e **fora do lock loca
 | 3.2 Memória própria por instância (bônus: compartilhar) | Estado local por instância; bônus via serviço central | `CloudForgeServiceImpl` (campos), `NomesServiceImpl.obterHistoricoGlobal` |
 | 3.3 Health com SERVING e NOT_SERVING, `grpc-services` no pom | Comandos `serving` e `notserving` no console | `ServidorCloudForge.iniciarConsole`, `definirHealth`, `pom.xml` |
 | 3.4 Nomes (onde), health (quais), round-robin (para qual) | Três papéis separados; o nomes não faz health check | `NomesServiceImpl.listar`, `ClienteCore` |
-| 3.5 Client-side LB manual | Classe interna `Servidor` guarda canal e stubs; `atualizar` reaproveita canais; só `avancarIndice` é `synchronized` | `ClienteCore.Servidor`, `atualizar`, `avancarIndice`, `proximoServidorSaudavel`, `enviar` |
+| 3.5 Client-side LB manual | Classe interna `Servidor` guarda canal e stubs; `atualizar` reaproveita canais; `synchronized` só em blocos curtos, sem rede (`avancarIndice`, reserva e liberação de canais) | `ClienteCore.Servidor`, `atualizar`, `avancarIndice`, `proximoServidorSaudavel`, `enviar` |
 
 </details>
 
@@ -411,12 +434,12 @@ CloudForge/
 │       │   ├── ClienteCore.java              # nomes, canais, round-robin, health, envio, concorrência
 │       │   ├── ClienteCloudForge.java        # main do console
 │       │   ├── ClienteGUI.java               # main da tela
-│       │   └── TelaCloudForge.java, Painel*.java, TemaCloudForge.java
+│       │   └── TelaCloudForge.java, Painel*.java, Animador.java, TemaCloudForge.java
 │       ├── resources/fontes/                 # Inter, Atkinson Hyperlegible Mono, Instrument Serif
 │       └── proto/{cloudforge,nomes}.proto
 ├── scripts/                                  # 00 a 06 (.bat)
 ├── docs/
-│   ├── DECISOES.md  EXPLICACAO-PARA-PROVA.md  EVIDENCIAS.md
+│   ├── DECISOES.md  EXPLICACAO-PARA-PROVA.md  EVIDENCIAS.md  EVIDENCIAS-REVISAO.md
 │   └── img/gui-cliente.png
 ├── PROMPTS.md                                # prompts usados, o que foi aceito e por quê
 └── README.md

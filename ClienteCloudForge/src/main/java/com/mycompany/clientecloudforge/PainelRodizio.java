@@ -1,5 +1,6 @@
 package com.mycompany.clientecloudforge;
 
+import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -8,85 +9,145 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
+import java.awt.event.MouseEvent;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
+import java.util.Locale;
+import java.util.function.Consumer;
 import javax.swing.JPanel;
-import javax.swing.Timer;
+import javax.swing.ToolTipManager;
 
 /**
- * Linha do tempo visual do rodízio (um bloco 24x20 por requisição).
+ * Linha do tempo visual do rodízio (um bloco 24x20 por requisição, com tooltip e taxa).
  */
-public class PainelRodizio extends JPanel {
+public class PainelRodizio extends JPanel implements Animador.Animavel {
     public enum TipoBloco { OK, SKIP, ERR }
 
     private static final class Bloco {
         final TipoBloco tipo;
         final int indiceInstancia;
         final String rotulo;
+        final String tooltip;
         final long criadoMs;
 
-        Bloco(TipoBloco tipo, int indiceInstancia, String rotulo) {
+        Bloco(TipoBloco tipo, int indiceInstancia, String rotulo, String tooltip) {
             this.tipo = tipo;
             this.indiceInstancia = indiceInstancia;
             this.rotulo = rotulo;
+            this.tooltip = tooltip;
             this.criadoMs = System.currentTimeMillis();
         }
     }
 
     private static final int MAX_BLOCOS = 34;
-    private static final int BLOCO_W = 24;
-    private static final int BLOCO_H = 20;
-    private static final int GAP = 4;
-    private static final int PAD = 14;
+    private static final int BLOCO_W = 26;
+    private static final int BLOCO_H = 22;
+    private static final int GAP = 6;
+    private static final int PAD = 16;
     private static final long DURACAO_ANIM_MS = 150;
+    private static final long JANELA_TAXA_MS = 5000;
 
     private final List<Bloco> blocos = new ArrayList<>();
-    private final Timer timerAnimacao;
+    private final Deque<Long> instantesRequisicoes = new ArrayDeque<>();
+    private Consumer<String> onAtualizarTaxa;
 
     public PainelRodizio() {
         setBackground(TemaCloudForge.S1);
         setBorder(new TemaCloudForge.BordaPainel(TemaCloudForge.LINE, 6));
-        setPreferredSize(new Dimension(0, 40));
-        setMinimumSize(new Dimension(0, 40));
-
-        timerAnimacao = new Timer(16, e -> {
-            long agora = System.currentTimeMillis();
-            boolean animando = false;
-            for (Bloco b : blocos) {
-                if (agora - b.criadoMs < DURACAO_ANIM_MS) {
-                    animando = true;
-                    break;
-                }
-            }
-            repaint();
-            if (!animando) {
-                ((Timer) e.getSource()).stop();
-            }
-        });
+        setPreferredSize(new Dimension(0, 44));
+        setMinimumSize(new Dimension(0, 38));
+        ToolTipManager.sharedInstance().registerComponent(this);
+        Animador.registrar(this);
     }
 
-    public void adicionarOk(int indiceInstancia) {
-        adicionar(new Bloco(TipoBloco.OK, Math.max(0, indiceInstancia), Integer.toString(Math.max(0, indiceInstancia) + 1)));
+    public void setOnAtualizarTaxa(Consumer<String> onAtualizarTaxa) {
+        this.onAtualizarTaxa = onAtualizarTaxa;
+        notificarTaxa(System.currentTimeMillis());
     }
 
-    public void adicionarSkip(int indiceInstancia) {
+    @Override
+    public boolean atualizarAnimacao(long agora) {
+        boolean animando = false;
+        for (Bloco b : blocos) {
+            if (agora - b.criadoMs < DURACAO_ANIM_MS) {
+                animando = true;
+                break;
+            }
+        }
+        boolean temTaxaRecente = limparInstantesAntigos(agora);
+        notificarTaxa(agora);
+        repaint();
+        return animando || temTaxaRecente;
+    }
+
+    public void adicionarOk(int indiceInstancia, String instancia, String tipoTarefa, long idTarefa, long duracaoMs) {
+        String tip = String.format("%s · %s · #%d · %d ms", instancia, tipoTarefa, idTarefa, duracaoMs);
+        adicionar(new Bloco(TipoBloco.OK, Math.max(0, indiceInstancia),
+                Integer.toString(Math.max(0, indiceInstancia) + 1), tip), true);
+    }
+
+    public void adicionarSkip(int indiceInstancia, String instancia, String motivo) {
         String rotulo = indiceInstancia >= 0 ? Integer.toString(indiceInstancia + 1) : "!";
-        adicionar(new Bloco(TipoBloco.SKIP, Math.max(0, indiceInstancia), rotulo));
+        String tip = (instancia == null || instancia.isBlank() ? "instância" : instancia)
+                + " · pulado (" + (motivo == null ? "indisponível" : motivo) + ")";
+        adicionar(new Bloco(TipoBloco.SKIP, Math.max(0, indiceInstancia), rotulo, tip), false);
     }
 
-    public void adicionarErro() {
-        adicionar(new Bloco(TipoBloco.ERR, 0, "×"));
+    public void adicionarErro(String motivo) {
+        String tip = "Falha: " + (motivo == null ? "erro" : motivo);
+        adicionar(new Bloco(TipoBloco.ERR, 0, "x", tip), false);
     }
 
-    private void adicionar(Bloco bloco) {
+    private void adicionar(Bloco bloco, boolean contarNaTaxa) {
         blocos.add(bloco);
         if (blocos.size() > MAX_BLOCOS) {
             blocos.remove(0);
         }
-        if (!timerAnimacao.isRunning()) {
-            timerAnimacao.start();
+        long agora = System.currentTimeMillis();
+        if (contarNaTaxa) {
+            instantesRequisicoes.addLast(agora);
         }
+        limparInstantesAntigos(agora);
+        notificarTaxa(agora);
+        Animador.acordar();
         repaint();
+    }
+
+    public double getTaxaReqPorSeg() {
+        limparInstantesAntigos(System.currentTimeMillis());
+        return instantesRequisicoes.size() / 5.0;
+    }
+
+    private boolean limparInstantesAntigos(long agora) {
+        while (!instantesRequisicoes.isEmpty() && agora - instantesRequisicoes.peekFirst() > JANELA_TAXA_MS) {
+            instantesRequisicoes.removeFirst();
+        }
+        return !instantesRequisicoes.isEmpty();
+    }
+
+    private void notificarTaxa(long agora) {
+        if (onAtualizarTaxa == null) return;
+        limparInstantesAntigos(agora);
+        double taxa = instantesRequisicoes.size() / 5.0;
+        onAtualizarTaxa.accept(String.format(Locale.US, "taxa: %.1f req/s", taxa));
+    }
+
+    @Override
+    public String getToolTipText(MouseEvent e) {
+        if (blocos.isEmpty()) return null;
+        int x = PAD;
+        int y = (getHeight() - BLOCO_H) / 2;
+        int limiteX = getWidth() - PAD;
+        for (Bloco b : blocos) {
+            if (x + BLOCO_W > limiteX) break;
+            if (e.getX() >= x && e.getX() <= x + BLOCO_W && e.getY() >= y && e.getY() <= y + BLOCO_H) {
+                return b.tooltip;
+            }
+            x += BLOCO_W + GAP;
+        }
+        return null;
     }
 
     @Override
@@ -100,7 +161,7 @@ public class PainelRodizio extends JPanel {
             g2.setColor(TemaCloudForge.MUTE);
             FontMetrics fm = g2.getFontMetrics();
             int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-            g2.drawString("Nenhuma requisição ainda.", PAD, y);
+            g2.drawString("Sem eventos individuais. Lotes aparecem no resumo e na trilha.", PAD, y);
             g2.dispose();
             return;
         }
@@ -112,21 +173,26 @@ public class PainelRodizio extends JPanel {
         Stroke tracejado = new BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, new float[]{3f, 2f}, 0f);
         Stroke solido = new BasicStroke(1f);
 
-        g2.setFont(TemaCloudForge.monoBold(10f));
+        g2.setFont(TemaCloudForge.monoBold(10.5f));
         FontMetrics fm = g2.getFontMetrics();
 
         for (Bloco b : blocos) {
             if (x + BLOCO_W > limiteX) break;
 
-            double t = Math.min(1.0, (double) (agora - b.criadoMs) / DURACAO_ANIM_MS);
-            int inset = (int) Math.round((1.0 - t) * 2.0);
-            int bx = x + inset;
-            int by = y + inset;
-            int bw = Math.max(4, BLOCO_W - inset * 2);
-            int bh = Math.max(4, BLOCO_H - inset * 2);
+            double raw = Animador.isReduzirAnimacoes() ? 1.0
+                    : Math.min(1.0, (double) (agora - b.criadoMs) / DURACAO_ANIM_MS);
+            double ease = Animador.easeOut(raw);
+            double escala = 0.6 + 0.4 * ease;
+            float alpha = (float) Math.max(0.05, ease);
 
+            int bw = Math.max(4, (int) Math.round(BLOCO_W * escala));
+            int bh = Math.max(4, (int) Math.round(BLOCO_H * escala));
+            int bx = x + (BLOCO_W - bw) / 2;
+            int by = y + (BLOCO_H - bh) / 2;
+
+            g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
             if (b.tipo == TipoBloco.OK) {
-                Color cor = TemaCloudForge.CORES_INSTANCIA[b.indiceInstancia % TemaCloudForge.CORES_INSTANCIA.length];
+                Color cor = TemaCloudForge.corInstancia(b.indiceInstancia);
                 g2.setColor(cor);
                 g2.fillRoundRect(bx, by, bw, bh, 4, 4);
                 g2.setColor(TemaCloudForge.ON_ACCENT);
