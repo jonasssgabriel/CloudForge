@@ -42,12 +42,17 @@ public class PainelRodizio extends JPanel implements Animador.Animavel {
     }
 
     private static final int MAX_BLOCOS = 34;
-    private static final int BLOCO_W = 26;
-    private static final int BLOCO_H = 22;
-    private static final int GAP = 6;
-    private static final int PAD = 16;
+    private static final int BLOCO_W_BASE = 26;
+    private static final int BLOCO_H_BASE = 22;
+    private static final int GAP_BASE = 6;
+    private static final int PAD_BASE = 16;
     private static final long DURACAO_ANIM_MS = 150;
     private static final long JANELA_TAXA_MS = 5000;
+
+    private static int blocoW() { return TemaCloudForge.escala(BLOCO_W_BASE); }
+    private static int blocoH() { return TemaCloudForge.escala(BLOCO_H_BASE); }
+    private static int gap() { return TemaCloudForge.escala(GAP_BASE); }
+    private static int pad() { return TemaCloudForge.escala(PAD_BASE); }
 
     private final List<Bloco> blocos = new ArrayList<>();
     private final Deque<Long> instantesRequisicoes = new ArrayDeque<>();
@@ -137,15 +142,19 @@ public class PainelRodizio extends JPanel implements Animador.Animavel {
     @Override
     public String getToolTipText(MouseEvent e) {
         if (blocos.isEmpty()) return null;
-        int x = PAD;
-        int y = (getHeight() - BLOCO_H) / 2;
-        int limiteX = getWidth() - PAD;
+        int bw = blocoW();
+        int bh = blocoH();
+        int gp = gap();
+        int pd = pad();
+        int x = pd;
+        int y = (getHeight() - bh) / 2;
+        int limiteX = getWidth() - pd;
         for (Bloco b : blocos) {
-            if (x + BLOCO_W > limiteX) break;
-            if (e.getX() >= x && e.getX() <= x + BLOCO_W && e.getY() >= y && e.getY() <= y + BLOCO_H) {
+            if (x + bw > limiteX) break;
+            if (e.getX() >= x && e.getX() <= x + bw && e.getY() >= y && e.getY() <= y + bh) {
                 return b.tooltip;
             }
-            x += BLOCO_W + GAP;
+            x += bw + gp;
         }
         return null;
     }
@@ -156,28 +165,32 @@ public class PainelRodizio extends JPanel implements Animador.Animavel {
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
+        int pd = pad();
         if (blocos.isEmpty()) {
             g2.setFont(TemaCloudForge.mono(12f));
             g2.setColor(TemaCloudForge.MUTE);
             FontMetrics fm = g2.getFontMetrics();
             int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-            g2.drawString("Sem eventos individuais. Lotes aparecem no resumo e na trilha.", PAD, y);
+            g2.drawString("Sem eventos individuais. Lotes aparecem no resumo e na trilha.", pd, y);
             g2.dispose();
             return;
         }
 
+        int bwBase = blocoW();
+        int bhBase = blocoH();
+        int gp = gap();
         long agora = System.currentTimeMillis();
-        int x = PAD;
-        int y = (getHeight() - BLOCO_H) / 2;
-        int limiteX = getWidth() - PAD;
+        int x = pd;
+        int y = (getHeight() - bhBase) / 2;
+        int limiteX = getWidth() - pd;
         Stroke tracejado = new BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, new float[]{3f, 2f}, 0f);
         Stroke solido = new BasicStroke(1f);
 
-        g2.setFont(TemaCloudForge.monoBold(10.5f));
+        g2.setFont(TemaCloudForge.monoBold(TemaCloudForge.isModoApresentacao() ? 15f : 10.5f));
         FontMetrics fm = g2.getFontMetrics();
 
         for (Bloco b : blocos) {
-            if (x + BLOCO_W > limiteX) break;
+            if (x + bwBase > limiteX) break;
 
             double raw = Animador.isReduzirAnimacoes() ? 1.0
                     : Math.min(1.0, (double) (agora - b.criadoMs) / DURACAO_ANIM_MS);
@@ -185,10 +198,10 @@ public class PainelRodizio extends JPanel implements Animador.Animavel {
             double escala = 0.6 + 0.4 * ease;
             float alpha = (float) Math.max(0.05, ease);
 
-            int bw = Math.max(4, (int) Math.round(BLOCO_W * escala));
-            int bh = Math.max(4, (int) Math.round(BLOCO_H * escala));
-            int bx = x + (BLOCO_W - bw) / 2;
-            int by = y + (BLOCO_H - bh) / 2;
+            int bw = Math.max(4, (int) Math.round(bwBase * escala));
+            int bh = Math.max(4, (int) Math.round(bhBase * escala));
+            int bx = x + (bwBase - bw) / 2;
+            int by = y + (bhBase - bh) / 2;
 
             g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
             if (b.tipo == TipoBloco.OK) {
@@ -207,11 +220,11 @@ public class PainelRodizio extends JPanel implements Animador.Animavel {
                 g2.drawRoundRect(bx, by, bw - 1, bh - 1, 4, 4);
             }
 
-            int tx = x + (BLOCO_W - fm.stringWidth(b.rotulo)) / 2;
-            int ty = y + (BLOCO_H - fm.getHeight()) / 2 + fm.getAscent();
+            int tx = x + (bwBase - fm.stringWidth(b.rotulo)) / 2;
+            int ty = y + (bhBase - fm.getHeight()) / 2 + fm.getAscent();
             g2.drawString(b.rotulo, tx, ty);
 
-            x += BLOCO_W + GAP;
+            x += bwBase + gp;
         }
         g2.dispose();
     }

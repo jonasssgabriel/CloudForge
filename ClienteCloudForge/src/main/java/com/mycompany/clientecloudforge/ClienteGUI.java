@@ -15,12 +15,15 @@ public class ClienteGUI {
         String enderecoNomes = "localhost:50050";
         String caminhoScreenshot = null;
         String cenario = "rr";
+        boolean modoApresentacao = false;
         int larguraJanela = -1;
         int alturaJanela = -1;
 
         for (int i = 0; i < args.length; i++) {
             if ("--screenshot".equals(args[i]) && i + 1 < args.length) {
                 caminhoScreenshot = args[++i];
+            } else if ("--apresentacao".equals(args[i])) {
+                modoApresentacao = true;
             } else if (args[i].startsWith("--cenario=")) {
                 cenario = args[i].substring("--cenario=".length());
             } else if ("--cenario".equals(args[i]) && i + 1 < args.length) {
@@ -45,19 +48,25 @@ public class ClienteGUI {
         final String alvoNomes = enderecoNomes;
         final String arquivoPng = caminhoScreenshot;
         final String modoCenario = cenario;
+        final boolean iniciarApresentacao = modoApresentacao;
         final int wJanela = larguraJanela;
         final int hJanela = alturaJanela;
 
         TemaCloudForge.aplicar();
         EventQueue.invokeLater(() -> {
             TelaCloudForge tela = new TelaCloudForge(alvoNomes);
-            if (wJanela > 0 && hJanela > 0) {
+            boolean tamanhoExplicito = wJanela > 0 && hJanela > 0;
+            if (tamanhoExplicito) {
                 tela.setSize(wJanela, hJanela);
                 tela.setLocationRelativeTo(null);
             }
             tela.setVisible(true);
 
-            if (arquivoPng != null && !arquivoPng.isBlank()) {
+            if (iniciarApresentacao && arquivoPng != null && !arquivoPng.isBlank()) {
+                agendarCapturaApresentacao(tela, arquivoPng, tamanhoExplicito);
+            } else if (iniciarApresentacao) {
+                Animador.agendar(800, tela::iniciarModoApresentacao);
+            } else if (arquivoPng != null && !arquivoPng.isBlank()) {
                 if ("anim".equalsIgnoreCase(modoCenario)) {
                     agendarSequenciaAnimacao(tela, arquivoPng);
                 } else {
@@ -79,6 +88,24 @@ public class ClienteGUI {
         } catch (NumberFormatException ex) {
             return null;
         }
+    }
+
+    /** Executa a apresentação real e salva 3 momentos (etapas 2, 5 e 8) como -1.png, -2.png e -3.png. */
+    private static void agendarCapturaApresentacao(TelaCloudForge tela, String basePng, boolean semMaximizar) {
+        String semExt = basePng.endsWith(".png") ? basePng.substring(0, basePng.length() - 4) : basePng;
+        Animador.agendar(1500, () -> tela.iniciarModoApresentacao(semMaximizar, true, etapa -> {
+            if (etapa == 1) {
+                Animador.agendar(420, () -> salvarJanela(tela, new File(semExt + "-1.png")));
+            } else if (etapa == 4) {
+                Animador.agendar(700, () -> salvarJanela(tela, new File(semExt + "-2.png")));
+            } else if (etapa == 7) {
+                Animador.agendar(450, () -> {
+                    salvarJanela(tela, new File(semExt + "-3.png"));
+                    tela.dispose();
+                    System.exit(0);
+                });
+            }
+        }));
     }
 
     private static void agendarCapturaUnica(TelaCloudForge tela, String arquivoPng, String modoCenario) {

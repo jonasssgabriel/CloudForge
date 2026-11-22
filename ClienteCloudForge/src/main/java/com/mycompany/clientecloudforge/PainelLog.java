@@ -88,6 +88,9 @@ public class PainelLog extends JPanel implements Animador.Animavel {
         }
     };
 
+    private final JLabel lblEsq = new JLabel("cliente");
+    private final JLabel lblDir = new JLabel("deadline: health 2 s · tarefa 5 s");
+    private final BotaoAnimado btnLimpar = new BotaoAnimado("Limpar log");
     private final StyledDocument doc;
     private final Style estiloOk;
     private final Style estiloSkip;
@@ -105,19 +108,16 @@ public class PainelLog extends JPanel implements Animador.Animavel {
                 BorderFactory.createMatteBorder(0, 0, 1, 0, TemaCloudForge.DIVIDER),
                 BorderFactory.createEmptyBorder(4, 16, 4, 12)));
 
-        JLabel lblEsq = new JLabel("cliente");
         lblEsq.setFont(TemaCloudForge.sans(12.5f));
         lblEsq.setForeground(TemaCloudForge.MUTE);
         lblEsq.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 6));
 
         JPanel direita = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         direita.setBackground(TemaCloudForge.S1);
-        JLabel lblDir = new JLabel("deadline: health 2 s · tarefa 5 s");
         lblDir.setFont(TemaCloudForge.mono(11.5f));
         lblDir.setForeground(TemaCloudForge.MUTE);
         lblDir.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
 
-        BotaoAnimado btnLimpar = new BotaoAnimado("Limpar log");
         btnLimpar.setFont(TemaCloudForge.sans(12f));
         btnLimpar.setPreferredSize(new Dimension(94, 28));
         btnLimpar.addActionListener(e -> limpar());
@@ -155,11 +155,31 @@ public class PainelLog extends JPanel implements Animador.Animavel {
         Animador.registrar(this);
     }
 
+    /** Reaplica fontes e tamanho do botão ao entrar ou sair do modo apresentação. */
+    public void reaplicarEscala() {
+        int tamMono = TemaCloudForge.escala(12);
+        lblEsq.setFont(TemaCloudForge.sans(12.5f));
+        lblDir.setFont(TemaCloudForge.mono(11.5f));
+        btnLimpar.setFont(TemaCloudForge.sans(12f));
+        btnLimpar.setPreferredSize(new Dimension(TemaCloudForge.escala(94), TemaCloudForge.escala(28)));
+        area.setFont(TemaCloudForge.mono(12f));
+        for (Style st : new Style[]{estiloOk, estiloSkip, estiloErro, estiloMudo}) {
+            StyleConstants.setFontSize(st, tamMono);
+        }
+        if (doc.getLength() > 0) {
+            SimpleAttributeSet attrs = new SimpleAttributeSet();
+            StyleConstants.setFontSize(attrs, tamMono);
+            doc.setCharacterAttributes(0, doc.getLength(), attrs, false);
+        }
+        revalidate();
+        repaint();
+    }
+
     private Style criarEstilo(String nome, Color cor) {
         Style s = area.addStyle(nome, null);
         StyleConstants.setForeground(s, cor);
         StyleConstants.setFontFamily(s, TemaCloudForge.mono(12f).getFamily());
-        StyleConstants.setFontSize(s, 12);
+        StyleConstants.setFontSize(s, TemaCloudForge.escala(12));
         return s;
     }
 
@@ -177,7 +197,7 @@ public class PainelLog extends JPanel implements Animador.Animavel {
         StyleConstants.setForeground(attrs, corTexto);
         StyleConstants.setBold(attrs, true);
         StyleConstants.setFontFamily(attrs, TemaCloudForge.mono(12f).getFamily());
-        StyleConstants.setFontSize(attrs, 12);
+        StyleConstants.setFontSize(attrs, TemaCloudForge.escala(12));
         if (!Animador.isReduzirAnimacoes()) {
             StyleConstants.setBackground(attrs, TemaCloudForge.interpolarCor(TemaCloudForge.S1, corTexto, 0.12));
             selosAtivos.add(new SeloAnimado(inicio, tam, corTexto, System.currentTimeMillis()));

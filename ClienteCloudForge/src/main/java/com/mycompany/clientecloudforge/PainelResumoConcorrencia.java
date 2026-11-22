@@ -22,10 +22,18 @@ public class PainelResumoConcorrencia extends JPanel implements Animador.Animave
 
     public PainelResumoConcorrencia() {
         setBackground(TemaCloudForge.S1);
-        setPreferredSize(new Dimension(0, 58));
-        setMinimumSize(new Dimension(0, 58));
+        reaplicarEscala();
         setVisible(false);
         Animador.registrar(this);
+    }
+
+    /** Reajusta altura conforme o fator de escala do tema. */
+    public void reaplicarEscala() {
+        int h = TemaCloudForge.escala(TemaCloudForge.isModoApresentacao() ? 68 : 58);
+        setPreferredSize(new Dimension(0, h));
+        setMinimumSize(new Dimension(0, h));
+        revalidate();
+        repaint();
     }
 
     public void definirResumo(ClienteCore.ResumoConcorrencia resumo) {
@@ -66,34 +74,37 @@ public class PainelResumoConcorrencia extends JPanel implements Animador.Animave
         g2.drawLine(0, 0, w, 0);
 
         // Linha 1: título + selo com check Path2D (300 ms)
-        g2.setFont(TemaCloudForge.sansMedium(11.5f));
+        boolean apres = TemaCloudForge.isModoApresentacao();
+        int yLinha1 = TemaCloudForge.escala(apres ? 21 : 18);
+        g2.setFont(TemaCloudForge.sansMedium(apres ? 13f : 11.5f));
         g2.setColor(TemaCloudForge.MUTE);
-        g2.drawString("Concorrência", 0, 18);
+        g2.drawString("Concorrência", 0, yLinha1);
 
         boolean ok = resumo.confere() && resumo.idsRepetidos() == 0;
         String selo = resumo.somaConcluidasInstancias() < 0 ? "inconclusivo" : ok ? "soma confere" : "soma diverge";
         Color corSelo = resumo.somaConcluidasInstancias() < 0 ? TemaCloudForge.WARN : ok ? TemaCloudForge.GOOD : TemaCloudForge.BAD;
-        g2.setFont(TemaCloudForge.mono(11f));
+        g2.setFont(apres ? TemaCloudForge.monoBold(15f) : TemaCloudForge.mono(11f));
         FontMetrics fmSelo = g2.getFontMetrics();
         int wSelo = fmSelo.stringWidth(selo);
+        int dotDiam = TemaCloudForge.escala(apres ? 12 : 10);
         int xSelo = w - wSelo - 4;
-        int xDot = xSelo - 13;
-        int yDot = 10;
+        int xDot = xSelo - dotDiam - 6;
+        int yDot = yLinha1 - dotDiam + 1;
 
         g2.setColor(corSelo);
-        g2.fillOval(xDot, yDot, 9, 9);
+        g2.fillOval(xDot, yDot, dotDiam, dotDiam);
 
         if (ok) {
             double progCheck = Animador.isReduzirAnimacoes() ? 1.0
                     : Animador.easeOut(Math.min(1.0, (double) (agora - inicioAnimMs) / DURACAO_CHECK_MS));
-            desenharCheck(g2, xDot + 2, yDot + 4.5, progCheck);
+            desenharCheck(g2, xDot + dotDiam * 0.22, yDot + dotDiam * 0.50, progCheck);
         }
         g2.setColor(corSelo);
-        g2.drawString(selo, xSelo, 18);
+        g2.drawString(selo, xSelo, yLinha1);
 
         // Linha 2: barra segmentada preenchendo da esquerda para a direita (600 ms)
-        int yBarra = 26;
-        int hBarra = 5;
+        int yBarra = TemaCloudForge.escala(apres ? 30 : 26);
+        int hBarra = TemaCloudForge.escala(apres ? 7 : 5);
         g2.setColor(TemaCloudForge.S3);
         g2.fillRoundRect(0, yBarra, w, hBarra, 3, 3);
 
@@ -119,12 +130,12 @@ public class PainelResumoConcorrencia extends JPanel implements Animador.Animave
             g2.fillRect(x, yBarra, Math.min(w - x, wOutras), hBarra);
         }
 
-        // Linha 3: métricas numéricas compactas
-        g2.setFont(TemaCloudForge.mono(11f));
-        g2.setColor(TemaCloudForge.MUTE);
+        // Linha 3: métricas numéricas (20+ px no modo apresentação)
+        g2.setFont(apres ? TemaCloudForge.monoBold(15.2f) : TemaCloudForge.mono(11f));
+        g2.setColor(apres ? TemaCloudForge.FG : TemaCloudForge.MUTE);
         String metricas = String.format("env %d · ok %d · rej %d · dup %d",
                 resumo.enviadas(), resumo.concluidas(), resumo.rejeitadas(), resumo.idsRepetidos());
-        g2.drawString(metricas, 0, 48);
+        g2.drawString(metricas, 0, TemaCloudForge.escala(apres ? 57 : 48));
 
         g2.dispose();
     }

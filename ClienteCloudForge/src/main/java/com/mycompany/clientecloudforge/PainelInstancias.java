@@ -46,7 +46,10 @@ public class PainelInstancias extends JPanel implements Animador.Animavel {
     private static final int MAX_LINHAS_SEM_ROLAGEM = 4;
     private static final int LARGURA_MIN_TABELA = 720;
     private static final int LARGURA_PREF_TABELA = 768;
+    private static final int[] MIN_LARG_BASE = {92, 138, 114, 88, 102, 82, 46, 58};
+    private static final int[] PREF_LARG_BASE = {98, 146, 120, 94, 110, 88, 50, 62};
 
+    private boolean modoCompacto = false;
     private int alturaCabecalho = ALTURA_CABECALHO_NORMAL;
     private int alturaLinha = ALTURA_LINHA_NORMAL;
 
@@ -154,13 +157,27 @@ public class PainelInstancias extends JPanel implements Animador.Animavel {
 
     /** Alterna altura compacta das linhas em janelas menores (ex.: 1000x700). */
     public void setCompacto(boolean compacto) {
-        int novoCab = compacto ? ALTURA_CABECALHO_COMPACTO : ALTURA_CABECALHO_NORMAL;
-        int novaLinha = compacto ? ALTURA_LINHA_COMPACTO : ALTURA_LINHA_NORMAL;
-        if (novoCab == alturaCabecalho && novaLinha == alturaLinha) return;
+        this.modoCompacto = compacto;
+        reaplicarEscala();
+    }
+
+    /** Reaplica escala atual do tema às fontes, alturas de linha e larguras das colunas. */
+    public void reaplicarEscala() {
+        int novoCab = TemaCloudForge.escala(modoCompacto ? ALTURA_CABECALHO_COMPACTO : ALTURA_CABECALHO_NORMAL);
+        int novaLinha = TemaCloudForge.escala(modoCompacto ? ALTURA_LINHA_COMPACTO : ALTURA_LINHA_NORMAL);
         alturaCabecalho = novoCab;
         alturaLinha = novaLinha;
+        tabela.setFont(TemaCloudForge.mono(12f));
         tabela.setRowHeight(alturaLinha);
-        tabela.getTableHeader().setPreferredSize(new Dimension(0, alturaCabecalho));
+        JTableHeader cab = tabela.getTableHeader();
+        cab.setFont(TemaCloudForge.sansMedium(11.5f));
+        cab.setPreferredSize(new Dimension(0, alturaCabecalho));
+
+        TableColumnModel cols = tabela.getColumnModel();
+        for (int i = 0; i < MIN_LARG_BASE.length; i++) {
+            cols.getColumn(i).setMinWidth(TemaCloudForge.escala(MIN_LARG_BASE[i]));
+            cols.getColumn(i).setPreferredWidth(TemaCloudForge.escala(PREF_LARG_BASE[i]));
+        }
         for (int i = 0; i < modelo.linhas.size(); i++) {
             LinhaInstancia l = modelo.linhas.get(i);
             if (!l.saindo && l.inicioEntradaMs == 0L) {
@@ -168,6 +185,10 @@ public class PainelInstancias extends JPanel implements Animador.Animavel {
             }
         }
         ajustarAltura();
+        cab.revalidate();
+        cab.repaint();
+        tabela.revalidate();
+        tabela.repaint();
     }
 
     /** Registra uma resposta concluída com sucesso para sparkline deslizante, destaque e horário. */
@@ -483,9 +504,9 @@ public class PainelInstancias extends JPanel implements Animador.Animavel {
         rolagem.setVerticalScrollBarPolicy(qtd > MAX_LINHAS_SEM_ROLAGEM
                 ? ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
                 : ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
-        tabela.setPreferredScrollableViewportSize(new Dimension(LARGURA_PREF_TABELA, alturaCorpo));
-        setPreferredSize(new Dimension(LARGURA_PREF_TABELA, alturaTotal));
-        setMinimumSize(new Dimension(LARGURA_MIN_TABELA, alturaTotal));
+        tabela.setPreferredScrollableViewportSize(new Dimension(TemaCloudForge.escala(LARGURA_PREF_TABELA), alturaCorpo));
+        setPreferredSize(new Dimension(TemaCloudForge.escala(LARGURA_PREF_TABELA), alturaTotal));
+        setMinimumSize(new Dimension(TemaCloudForge.escala(LARGURA_MIN_TABELA), alturaTotal));
         revalidate();
     }
 
@@ -597,7 +618,7 @@ public class PainelInstancias extends JPanel implements Animador.Animavel {
             JLabel lbl = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
             lbl.setBackground(TemaCloudForge.S1);
             lbl.setForeground(TemaCloudForge.MUTE);
-            lbl.setFont(TemaCloudForge.sansMedium(11.5f));
+            lbl.setFont(TemaCloudForge.sansMedium(TemaCloudForge.isModoApresentacao() ? 12.5f : 11.5f));
             lbl.setHorizontalAlignment(column >= 6 ? SwingConstants.RIGHT : SwingConstants.LEFT);
             lbl.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createMatteBorder(0, 0, 1, 0, TemaCloudForge.DIVIDER),
@@ -626,7 +647,10 @@ public class PainelInstancias extends JPanel implements Animador.Animavel {
             lbl.setBackground(fundoLinha(row, l));
             Color fg = destaqueId && off ? TemaCloudForge.MUTE : TemaCloudForge.FG;
             lbl.setForeground(new Color(fg.getRed(), fg.getGreen(), fg.getBlue(), Math.round(l.alphaLinha * 255)));
-            lbl.setFont(TemaCloudForge.mono(12f));
+            boolean destaqueProjecao = TemaCloudForge.isModoApresentacao() && (destaqueId || column >= 6);
+            lbl.setFont(destaqueProjecao
+                    ? TemaCloudForge.monoBold(15.2f)
+                    : TemaCloudForge.mono(TemaCloudForge.isModoApresentacao() ? 12.5f : 12f));
             lbl.setHorizontalAlignment(alinhamento);
             if (desenharBarraSelecao && isSelected) {
                 lbl.setBorder(BorderFactory.createCompoundBorder(
@@ -667,17 +691,18 @@ public class PainelInstancias extends JPanel implements Animador.Animavel {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
             int yCentro = getHeight() / 2;
-            int dotX = 8;
-            int dotY = yCentro - 3;
-
-
+            int dotDiam = TemaCloudForge.escala(7);
+            int dotX = TemaCloudForge.escala(8);
+            int dotY = yCentro - dotDiam / 2;
 
             g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alphaLinha));
             g2.setColor(cor);
-            g2.fillOval(dotX, dotY, 7, 7);
-            g2.setFont(TemaCloudForge.mono(11.5f));
+            g2.fillOval(dotX, dotY, dotDiam, dotDiam);
+            g2.setFont(TemaCloudForge.isModoApresentacao()
+                    ? TemaCloudForge.monoBold(12.5f)
+                    : TemaCloudForge.mono(11.5f));
             FontMetrics fm = g2.getFontMetrics();
-            g2.drawString(status, 21, yCentro + fm.getAscent() / 2 - 1);
+            g2.drawString(status, dotX + dotDiam + TemaCloudForge.escala(6), yCentro + fm.getAscent() / 2 - 1);
             g2.dispose();
         }
     }
@@ -711,7 +736,7 @@ public class PainelInstancias extends JPanel implements Animador.Animavel {
             g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
             g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alphaLinha));
 
-            g2.setFont(TemaCloudForge.mono(12f));
+            g2.setFont(TemaCloudForge.mono(TemaCloudForge.isModoApresentacao() ? 12.5f : 12f));
             FontMetrics fm = g2.getFontMetrics();
             int xTexto = 8;
             int yTexto = getHeight() / 2 + fm.getAscent() / 2 - 1;
@@ -788,7 +813,7 @@ public class PainelInstancias extends JPanel implements Animador.Animavel {
 
             int xGraf = 8;
             int wGraf = Math.max(20, xValor - xGraf - 8);
-            int hGraf = 18;
+            int hGraf = TemaCloudForge.escala(18);
             int yGraf = (getHeight() - hGraf) / 2;
 
             long min = Long.MAX_VALUE;
@@ -843,7 +868,7 @@ public class PainelInstancias extends JPanel implements Animador.Animavel {
             JLabel lbl = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
             LinhaInstancia l = modelo.linhas.get(row);
             lbl.setBackground(fundoLinha(row, l));
-            lbl.setFont(TemaCloudForge.mono(11.5f));
+            lbl.setFont(TemaCloudForge.mono(TemaCloudForge.isModoApresentacao() ? 12.5f : 11.5f));
             lbl.setHorizontalAlignment(SwingConstants.LEFT);
             lbl.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
             if (l.ultimaRespostaTexto == null || l.ultimaRespostaTexto.isEmpty()) {

@@ -65,13 +65,33 @@ public class PainelEstadoLocal extends JPanel implements Animador.Animavel {
     private double totalGlobalAlvo;
     private final Animador.Transicao transicaoGlobal = new Animador.Transicao(DURACAO_ANIM_MS, 1.0);
     private boolean animacaoEmCurso;
+    private boolean destacado;
 
     public PainelEstadoLocal() {
         setBackground(TemaCloudForge.S1);
         setBorder(new TemaCloudForge.BordaPainel(TemaCloudForge.LINE, 6));
-        setPreferredSize(new Dimension(420, 160));
-        setMinimumSize(new Dimension(360, 154));
+        reaplicarEscala();
         Animador.registrar(this);
+    }
+
+    /** Reajusta as dimensões preferidas quando a escala do tema muda. */
+    public void reaplicarEscala() {
+        int altPref = TemaCloudForge.isModoApresentacao() ? 204 : 160;
+        int altMin = TemaCloudForge.isModoApresentacao() ? 196 : 154;
+        setPreferredSize(new Dimension(TemaCloudForge.escala(420), altPref));
+        setMinimumSize(new Dimension(TemaCloudForge.escala(360), altMin));
+        revalidate();
+        repaint();
+    }
+
+    /** Destaca discretamente a borda durante a etapa Estado local da apresentação. */
+    public void setDestacado(boolean destacado) {
+        if (this.destacado != destacado) {
+            this.destacado = destacado;
+            setBorder(new TemaCloudForge.BordaPainel(
+                    destacado ? TemaCloudForge.ACCENT : TemaCloudForge.LINE, 6));
+            repaint();
+        }
     }
 
     /**
@@ -243,38 +263,44 @@ public class PainelEstadoLocal extends JPanel implements Animador.Animavel {
 
         int w = getWidth();
         int h = getHeight();
-        int larguraUtil = Math.max(120, w - PAD_X * 2);
+        int padX = TemaCloudForge.escala(PAD_X);
+        int padTop = TemaCloudForge.escala(PAD_TOP);
+        int padBottom = TemaCloudForge.escala(PAD_BOTTOM);
+        int altCab = TemaCloudForge.escala(ALTURA_CABECALHO);
+        int altBlocoGlobal = TemaCloudForge.escala(ALTURA_BLOCO_GLOBAL);
+        int larguraUtil = Math.max(120, w - padX * 2);
 
         // 1. Cabeçalho compacto + destaque quando duas ou mais instâncias exibem o mesmo #id
-        desenharCabecalho(g2, lista, PAD_X, PAD_TOP, larguraUtil);
+        desenharCabecalho(g2, lista, padX, padTop, larguraUtil);
 
         // Calcula o espaço reservado no rodapé (legenda fixa + bloco global)
-        g2.setFont(TemaCloudForge.sans(10f));
+        float tamLeg = TemaCloudForge.isModoApresentacao() ? 11.5f : 10f;
+        g2.setFont(TemaCloudForge.sans(tamLeg));
         FontMetrics fmLeg = g2.getFontMetrics();
         boolean legendaDuasLinhas = fmLeg.stringWidth(LEGENDA_COMPLETA) > larguraUtil;
         int alturaLegenda = legendaDuasLinhas ? fmLeg.getHeight() * 2 - 2 : fmLeg.getHeight();
-        int yLegendaTopo = h - PAD_BOTTOM - alturaLegenda;
-        int yBlocoGlobal = yLegendaTopo - 6 - ALTURA_BLOCO_GLOBAL;
-        int yDivisor = yBlocoGlobal - 5;
+        int yLegendaTopo = h - padBottom - alturaLegenda;
+        int yBlocoGlobal = yLegendaTopo - 5 - altBlocoGlobal;
+        int yDivisor = yBlocoGlobal - 4;
 
         // 2. Área principal: estado vazio ou linhas por instância
-        int yAreaInicio = PAD_TOP + ALTURA_CABECALHO + 4;
+        int yAreaInicio = padTop + altCab + 4;
         int alturaArea = Math.max(24, yDivisor - 4 - yAreaInicio);
 
         if (lista.isEmpty()) {
-            desenharEstadoVazio(g2, PAD_X, yAreaInicio, larguraUtil, alturaArea);
+            desenharEstadoVazio(g2, padX, yAreaInicio, larguraUtil, alturaArea);
         } else {
-            desenharLinhasInstancias(g2, lista, agora, PAD_X, yAreaInicio, larguraUtil, alturaArea);
+            desenharLinhasInstancias(g2, lista, agora, padX, yAreaInicio, larguraUtil, alturaArea);
         }
 
         // 3. Divisor fino + bloco "histórico global (bônus)"
         g2.setColor(TemaCloudForge.DIVIDER);
-        g2.drawLine(PAD_X, yDivisor, PAD_X + larguraUtil, yDivisor);
+        g2.drawLine(padX, yDivisor, padX + larguraUtil, yDivisor);
         desenharBlocoGlobal(g2, globalAtual, globalDe, globalAlvo, progGlobal,
-                PAD_X, yBlocoGlobal, larguraUtil, ALTURA_BLOCO_GLOBAL);
+                padX, yBlocoGlobal, larguraUtil, altBlocoGlobal);
 
         // 4. Legenda fixa explicando a independência dos contadores locais
-        desenharLegenda(g2, fmLeg, legendaDuasLinhas, PAD_X, yLegendaTopo, larguraUtil);
+        desenharLegenda(g2, fmLeg, legendaDuasLinhas, padX, yLegendaTopo, larguraUtil);
 
         g2.dispose();
     }
@@ -291,8 +317,8 @@ public class PainelEstadoLocal extends JPanel implements Animador.Animavel {
             String selo = "#" + idSimultaneo + " simultâneo";
             g2.setFont(TemaCloudForge.monoBold(10f));
             FontMetrics fmSelo = g2.getFontMetrics();
-            int wSelo = fmSelo.stringWidth(selo) + 12;
-            int hSelo = 15;
+            int wSelo = fmSelo.stringWidth(selo) + TemaCloudForge.escala(12);
+            int hSelo = TemaCloudForge.escala(16);
             int xSelo = x + largura - wSelo;
             int ySelo = Math.max(2, y - 1);
 
@@ -362,15 +388,16 @@ public class PainelEstadoLocal extends JPanel implements Animador.Animavel {
             long agora, int x, int y, int largura, int altura) {
         int qtd = lista.size();
         int gap = qtd >= 3 ? 3 : 5;
-        int maxVisiveis = Math.max(1, Math.min(qtd, (altura + gap) / 22));
-        int alturaLinha = Math.min(28, (altura - gap * (maxVisiveis - 1)) / maxVisiveis);
+        int minLinha = TemaCloudForge.escala(22);
+        int maxVisiveis = Math.max(1, Math.min(qtd, (altura + gap) / minLinha));
+        int alturaLinha = Math.min(TemaCloudForge.escala(30), (altura - gap * (maxVisiveis - 1)) / maxVisiveis);
         int alturaTotal = maxVisiveis * alturaLinha + (maxVisiveis - 1) * gap;
         int yAtual = y + Math.max(0, (altura - alturaTotal) / 2);
 
         // Largura do chip proporcional à largura do painel para manter colunas alinhadas
-        int wChip = Math.min(98, Math.max(76, largura / 4));
-        int wOdometro = 50;
-        int gapCol = 8;
+        int wChip = Math.min(TemaCloudForge.escala(118), Math.max(TemaCloudForge.escala(86), largura / 4));
+        int wOdometro = TemaCloudForge.escala(TemaCloudForge.isModoApresentacao() ? 70 : 54);
+        int gapCol = TemaCloudForge.escala(8);
 
         for (int i = 0; i < maxVisiveis; i++) {
             EstadoInstancia est = lista.get(i);
@@ -382,12 +409,12 @@ public class PainelEstadoLocal extends JPanel implements Animador.Animavel {
     private void desenharLinhaInstancia(Graphics2D g2, EstadoInstancia est, long agora,
             int x, int y, int largura, int altura, int wChip, int wOdometro, int gapCol) {
         // 1. Chip na cor da instância
-        int hChip = Math.min(22, altura - 2);
+        int hChip = Math.min(TemaCloudForge.escala(26), altura - 2);
         int yChip = y + (altura - hChip) / 2;
         g2.setColor(est.cor);
         g2.fillRoundRect(x, yChip, wChip, hChip, 5, 5);
 
-        g2.setFont(TemaCloudForge.monoBold(11f));
+        g2.setFont(TemaCloudForge.monoBold(TemaCloudForge.isModoApresentacao() ? 13.5f : 11f));
         FontMetrics fmChip = g2.getFontMetrics();
         String idTexto = ajustarTexto(fmChip, est.id, wChip - 12);
         g2.setColor(TemaCloudForge.ON_ACCENT);
@@ -395,7 +422,7 @@ public class PainelEstadoLocal extends JPanel implements Animador.Animavel {
 
         // 2. Odômetro animado do contador #id
         int xOdo = x + wChip + gapCol;
-        int hOdo = Math.min(24, altura);
+        int hOdo = Math.min(TemaCloudForge.escala(28), altura);
         int yOdo = y + (altura - hOdo) / 2;
         desenharOdometro(g2, est, agora, xOdo, yOdo, wOdometro, hOdo);
 
@@ -420,10 +447,12 @@ public class PainelEstadoLocal extends JPanel implements Animador.Animavel {
         String antigo = est.idTarefaAnterior == 0 ? "?" : Long.toString(est.idTarefaAnterior);
         String atual = est.idTarefaAtual == 0 ? "?" : Long.toString(est.idTarefaAtual);
 
-        // Centraliza o conjunto '#' + dígitos mantendo '#' colado ao número
-        g2.setFont(TemaCloudForge.monoBold(12f));
+        // Centraliza o conjunto '#' + dígitos (20+ px no modo apresentação para leitura de longe)
+        float tamHash = TemaCloudForge.isModoApresentacao() ? 14.5f : 12f;
+        float tamDig = TemaCloudForge.isModoApresentacao() ? 15.5f : 12.5f;
+        g2.setFont(TemaCloudForge.monoBold(tamHash));
         FontMetrics fmHash = g2.getFontMetrics();
-        g2.setFont(TemaCloudForge.monoBold(12.5f));
+        g2.setFont(TemaCloudForge.monoBold(tamDig));
         FontMetrics fmDigMedida = g2.getFontMetrics();
 
         int wHash = fmHash.stringWidth("#");
@@ -432,7 +461,7 @@ public class PainelEstadoLocal extends JPanel implements Animador.Animavel {
         int xHash = x + Math.max(5, (w - wGrupo) / 2);
         int yBaseHash = y + (h - fmHash.getHeight()) / 2 + fmHash.getAscent();
 
-        g2.setFont(TemaCloudForge.monoBold(12f));
+        g2.setFont(TemaCloudForge.monoBold(tamHash));
         g2.setColor(TemaCloudForge.MUTE);
         g2.drawString("#", xHash, yBaseHash);
 
@@ -441,7 +470,7 @@ public class PainelEstadoLocal extends JPanel implements Animador.Animavel {
 
         Graphics2D gClip = (Graphics2D) g2.create();
         gClip.clipRect(x + 2, y + 2, w - 4, h - 4);
-        gClip.setFont(TemaCloudForge.monoBold(12.5f));
+        gClip.setFont(TemaCloudForge.monoBold(tamDig));
         FontMetrics fmDig = gClip.getFontMetrics();
         int yBaseDig = y + (h - fmDig.getHeight()) / 2 + fmDig.getAscent();
 
@@ -501,7 +530,7 @@ public class PainelEstadoLocal extends JPanel implements Animador.Animavel {
         double rejAnim = est.rejeitadasDe + (est.rejeitadasAlvo - est.rejeitadasDe) * p;
 
         // Linha superior: contadores compactos (ok / rej / rec)
-        g2.setFont(TemaCloudForge.mono(10f));
+        g2.setFont(TemaCloudForge.mono(TemaCloudForge.isModoApresentacao() ? 12.2f : 10f));
         FontMetrics fm = g2.getFontMetrics();
         int yTexto = y + fm.getAscent() + 1;
 
@@ -621,7 +650,7 @@ public class PainelEstadoLocal extends JPanel implements Animador.Animavel {
 
     private void desenharLegenda(Graphics2D g2, FontMetrics fm, boolean duasLinhas,
             int x, int yTopo, int largura) {
-        g2.setFont(TemaCloudForge.sans(10f));
+        g2.setFont(TemaCloudForge.sans(TemaCloudForge.isModoApresentacao() ? 11.5f : 10f));
         g2.setColor(TemaCloudForge.MUTE);
         if (!duasLinhas) {
             g2.drawString(LEGENDA_COMPLETA, x, yTopo + fm.getAscent());

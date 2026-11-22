@@ -115,10 +115,10 @@ public class PainelToast extends JComponent implements Animador.Animavel {
                 }
             }
 
-            int largura = Math.min(420, fm.stringWidth(t.texto) + 32);
-            int altura = 32;
+            int largura = Math.min(TemaCloudForge.escala(440), fm.stringWidth(t.texto) + TemaCloudForge.escala(32));
+            int altura = TemaCloudForge.escala(32);
             int x = xDireita - largura + deslizeX;
-            int y = t.yAtual < 0 ? (getHeight() - 42 - altura - (toasts.size() - 1 - i) * 40) : (int) Math.round(t.yAtual);
+            int y = t.yAtual < 0 ? (getHeight() - TemaCloudForge.escala(42) - altura - (toasts.size() - 1 - i) * TemaCloudForge.escala(40)) : (int) Math.round(t.yAtual);
 
             g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.max(0.0f, Math.min(1.0f, alpha))));
             g2.setColor(TemaCloudForge.S1);

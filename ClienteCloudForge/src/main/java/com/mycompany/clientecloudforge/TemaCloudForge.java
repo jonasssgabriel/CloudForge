@@ -57,8 +57,34 @@ public final class TemaCloudForge {
     private static Font baseSans;
     private static Font baseMono;
     private static Font baseSerif;
+    private static volatile double fatorEscala = 1.0;
 
     private TemaCloudForge() {
+    }
+
+    /** Retorna o fator de escala atual da interface (1.0 normal, ~1.3 em apresentação). */
+    public static double getFatorEscala() {
+        return fatorEscala;
+    }
+
+    /** Indica se a interface está ampliada para projeção (modo apresentação). */
+    public static boolean isModoApresentacao() {
+        return fatorEscala > 1.05;
+    }
+
+    /** Define o fator de escala global usado pelas fontes e dimensões da interface. */
+    public static void setFatorEscala(double fator) {
+        fatorEscala = Math.max(1.0, Math.min(2.0, fator));
+    }
+
+    /** Converte um valor em pixels aplicando o fator de escala atual do tema. */
+    public static int escala(int px) {
+        return (int) Math.round(px * fatorEscala);
+    }
+
+    /** Converte um tamanho de fonte aplicando o fator de escala atual do tema. */
+    public static float escala(float px) {
+        return (float) (px * fatorEscala);
     }
 
     public static void aplicar() {
@@ -127,26 +153,47 @@ public final class TemaCloudForge {
     }
 
     public static Font sans(float tamanho) {
-        return baseSans.deriveFont(Font.PLAIN, tamanho);
+        return baseSans.deriveFont(Font.PLAIN, escala(tamanho));
     }
 
     public static Font sansMedium(float tamanho) {
-        return baseSans.deriveFont(Font.BOLD, tamanho);
+        return baseSans.deriveFont(Font.BOLD, escala(tamanho));
     }
 
     public static Font sansBold(float tamanho) {
-        return baseSans.deriveFont(Font.BOLD, tamanho);
+        return baseSans.deriveFont(Font.BOLD, escala(tamanho));
     }
 
     public static Font mono(float tamanho) {
-        return baseMono.deriveFont(Font.PLAIN, tamanho);
+        return baseMono.deriveFont(Font.PLAIN, escala(tamanho));
     }
 
     public static Font monoBold(float tamanho) {
-        return baseMono.deriveFont(Font.BOLD, tamanho);
+        return baseMono.deriveFont(Font.BOLD, escala(tamanho));
     }
 
     public static Font serifItalic(float tamanho) {
+        return baseSerif.deriveFont(Font.ITALIC, escala(tamanho));
+    }
+
+    /** Fontes sem multiplicação extra, para elementos já dimensionados em tela cheia (ex.: barra de legenda). */
+    public static Font sansFixa(float tamanho) {
+        return baseSans.deriveFont(Font.PLAIN, tamanho);
+    }
+
+    public static Font sansBoldFixa(float tamanho) {
+        return baseSans.deriveFont(Font.BOLD, tamanho);
+    }
+
+    public static Font monoFixa(float tamanho) {
+        return baseMono.deriveFont(Font.PLAIN, tamanho);
+    }
+
+    public static Font monoBoldFixa(float tamanho) {
+        return baseMono.deriveFont(Font.BOLD, tamanho);
+    }
+
+    public static Font serifItalicFixa(float tamanho) {
         return baseSerif.deriveFont(Font.ITALIC, tamanho);
     }
 

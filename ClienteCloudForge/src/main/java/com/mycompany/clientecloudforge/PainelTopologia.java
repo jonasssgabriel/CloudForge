@@ -382,24 +382,32 @@ public class PainelTopologia extends JPanel implements Animador.Animavel {
         int espacoNos;
 
         if (faixaHorizontal) {
-            boxNomes = new Rectangle(20, (h - 28) / 2, 132, 28);
-            int xCli = Math.max(boxNomes.x + boxNomes.width + 92, (int) Math.round(w * 0.28));
-            boxCliente = new Rectangle(xCli, (h - 32) / 2, 84, 32);
-            wNoInst = Math.min(280, Math.max(180, (int) Math.round(w * 0.30)));
-            xNoInst = Math.max(boxCliente.x + boxCliente.width + 120, w - 20 - wNoInst);
-            wNoInst = Math.max(150, w - 20 - xNoInst);
+            int wNomes = TemaCloudForge.escala(136);
+            int hNomes = TemaCloudForge.escala(28);
+            int wCli = TemaCloudForge.escala(86);
+            int hCli = TemaCloudForge.escala(32);
+            boxNomes = new Rectangle(20, (h - hNomes) / 2, wNomes, hNomes);
+            int xCli = Math.max(boxNomes.x + boxNomes.width + TemaCloudForge.escala(92), (int) Math.round(w * 0.28));
+            boxCliente = new Rectangle(xCli, (h - hCli) / 2, wCli, hCli);
+            wNoInst = Math.min(TemaCloudForge.escala(280), Math.max(TemaCloudForge.escala(180), (int) Math.round(w * 0.30)));
+            xNoInst = Math.max(boxCliente.x + boxCliente.width + TemaCloudForge.escala(120), w - 20 - wNoInst);
+            wNoInst = Math.max(TemaCloudForge.escala(150), w - 20 - xNoInst);
             topoUtil = 6;
             baseUtil = h - 6;
             espacoNos = 6;
         } else {
-            boxNomes = new Rectangle(16, 12, 126, 26);
-            wNoInst = Math.min(216, Math.max(134, (int) Math.round(w * 0.43)));
+            int wNomes = TemaCloudForge.escala(148);
+            int hNomes = TemaCloudForge.escala(26);
+            int wCli = TemaCloudForge.escala(86);
+            int hCli = TemaCloudForge.escala(36);
+            boxNomes = new Rectangle(16, 10, wNomes, hNomes);
+            wNoInst = Math.min(TemaCloudForge.escala(232), Math.max(TemaCloudForge.escala(148), (int) Math.round(w * 0.43)));
             xNoInst = w - 16 - wNoInst;
-            topoUtil = 52;
-            baseUtil = h - 12;
-            espacoNos = 10;
+            topoUtil = boxNomes.y + boxNomes.height + TemaCloudForge.escala(10);
+            baseUtil = h - 10;
+            espacoNos = TemaCloudForge.escala(8);
             int yCliCentro = topoUtil + (baseUtil - topoUtil) / 2;
-            boxCliente = new Rectangle(16, yCliCentro - 18, 76, 36);
+            boxCliente = new Rectangle(16, yCliCentro - hCli / 2, wCli, hCli);
         }
 
         // Calcula áreas das instâncias sem nunca extrapolar baseUtil
@@ -407,16 +415,17 @@ public class PainelTopologia extends JPanel implements Animador.Animavel {
         int yInicioNos = topoUtil;
         if (qtd > 0) {
             int espacoDisp = Math.max(28, baseUtil - topoUtil - (qtd - 1) * espacoNos);
-            int hMaxNo = faixaHorizontal ? 34 : 52;
+            int hMaxNo = faixaHorizontal ? TemaCloudForge.escala(34) : TemaCloudForge.escala(52);
             int hCabivel = espacoDisp / qtd;
-            int hNo = Math.min(hMaxNo, Math.max(22, hCabivel));
+            int hNo = Math.min(hMaxNo, Math.max(TemaCloudForge.escala(24), hCabivel));
             int totalH = qtd * hNo + (qtd - 1) * espacoNos;
             yInicioNos = topoUtil + Math.max(0, (baseUtil - topoUtil - totalH) / 2);
 
             if (!faixaHorizontal) {
                 int yCliCentro = yInicioNos + totalH / 2;
-                int yCli = Math.max(topoUtil, Math.min(baseUtil - 36, yCliCentro - 18));
-                boxCliente = new Rectangle(16, yCli, 76, 36);
+                int hCli = boxCliente.height;
+                int yCli = Math.max(topoUtil, Math.min(baseUtil - hCli, yCliCentro - hCli / 2));
+                boxCliente = new Rectangle(16, yCli, boxCliente.width, hCli);
             }
 
             for (int i = 0; i < qtd; i++) {
@@ -431,7 +440,7 @@ public class PainelTopologia extends JPanel implements Animador.Animavel {
         g2.setColor(TemaCloudForge.interpolarCor(TemaCloudForge.LINE, TemaCloudForge.ACCENT, fatorNomes * 0.6));
         g2.setStroke(solido);
         g2.drawRoundRect(boxNomes.x, boxNomes.y, boxNomes.width, boxNomes.height, 6, 6);
-        g2.setFont(TemaCloudForge.mono(11f));
+        g2.setFont(TemaCloudForge.mono(TemaCloudForge.isModoApresentacao() ? 12f : 11f));
         g2.setColor(TemaCloudForge.FG);
         desenharCentralizado(g2, "serviço de nomes", boxNomes);
 
@@ -440,7 +449,7 @@ public class PainelTopologia extends JPanel implements Animador.Animavel {
         g2.fillRoundRect(boxCliente.x, boxCliente.y, boxCliente.width, boxCliente.height, 6, 6);
         g2.setColor(TemaCloudForge.LINE);
         g2.drawRoundRect(boxCliente.x, boxCliente.y, boxCliente.width, boxCliente.height, 6, 6);
-        g2.setFont(TemaCloudForge.monoBold(11.5f));
+        g2.setFont(TemaCloudForge.monoBold(TemaCloudForge.isModoApresentacao() ? 12.5f : 11.5f));
         g2.setColor(TemaCloudForge.FG);
         desenharCentralizado(g2, "cliente", boxCliente);
 
@@ -587,26 +596,28 @@ public class PainelTopologia extends JPanel implements Animador.Animavel {
 
             // Cor de saúde vem da última consulta real.
             Color corSaude = corSaudeAtual(no, agora);
-            int yTexto = r.height >= 40 ? (r.y + r.height / 2 - 2) : (r.y + r.height / 2 + 1);
-            int dotX = r.x + 12;
-            int dotY = yTexto - 6;
-
-
+            int dotDiam = TemaCloudForge.escala(7);
+            int yTexto = r.height >= TemaCloudForge.escala(40) ? (r.y + r.height / 2 - 2) : (r.y + r.height / 2 + 1);
+            int dotX = r.x + TemaCloudForge.escala(12);
+            int dotY = yTexto - dotDiam + 1;
 
             gn.setColor(corSaude);
-            gn.fillOval(dotX, dotY, 7, 7);
+            gn.fillOval(dotX, dotY, dotDiam, dotDiam);
 
-            // ID da instância
-            gn.setFont(TemaCloudForge.mono(12f));
+            // ID da instância (maior no modo apresentação para leitura a 3 metros)
+            int xId = dotX + dotDiam + TemaCloudForge.escala(7);
+            gn.setFont(TemaCloudForge.isModoApresentacao()
+                    ? TemaCloudForge.monoBold(15.2f)
+                    : TemaCloudForge.mono(12f));
             gn.setColor(fora ? TemaCloudForge.MUTE : TemaCloudForge.FG);
-            gn.drawString(no.id, r.x + 26, yTexto + 1);
+            gn.drawString(no.id, xId, yTexto + 1);
 
             // Mini-barra de em-andamento animada suavemente
-            if (r.height >= 30) {
-                int xBarra = r.x + 26;
-                int wBarra = Math.max(32, r.width - 38);
-                int hBarra = 4;
-                int yBarra = r.y + r.height - 8;
+            if (r.height >= TemaCloudForge.escala(30)) {
+                int xBarra = xId;
+                int wBarra = Math.max(32, r.x + r.width - xBarra - TemaCloudForge.escala(12));
+                int hBarra = TemaCloudForge.escala(4);
+                int yBarra = r.y + r.height - hBarra - TemaCloudForge.escala(4);
                 gn.setColor(TemaCloudForge.S3);
                 gn.fillRoundRect(xBarra, yBarra, wBarra, hBarra, 2, 2);
                 if (no.limite > 0 && no.emAndamentoAnimado > 0.01) {

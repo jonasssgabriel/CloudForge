@@ -94,10 +94,16 @@ public class PainelPrazo extends JPanel implements Animador.Animavel {
     public PainelPrazo() {
         setBackground(TemaCloudForge.S1);
         setBorder(new TemaCloudForge.BordaPainel(TemaCloudForge.LINE, 6));
-        setMinimumSize(new Dimension(380, 166));
-        setPreferredSize(new Dimension(460, 172));
-        setMaximumSize(new Dimension(520, 180));
+        reaplicarEscala();
         Animador.registrar(this);
+    }
+
+    /** Reajusta dimensões do painel conforme a escala atual do tema. */
+    public void reaplicarEscala() {
+        setMinimumSize(new Dimension(TemaCloudForge.escala(380), TemaCloudForge.escala(166)));
+        setPreferredSize(new Dimension(TemaCloudForge.escala(460), TemaCloudForge.escala(172)));
+        revalidate();
+        repaint();
     }
 
     /**
@@ -327,25 +333,28 @@ public class PainelPrazo extends JPanel implements Animador.Animavel {
         }
 
         long agora = agoraMs();
-        boolean compacto = w < 420;
-        int wUtil = Math.max(120, w - PAD_X * 2);
-        int chipW = compacto ? 56 : 62;
-        int textoColW = compacto ? Math.min(198, Math.max(165, wUtil - chipW - 96))
-                                 : Math.min(224, Math.max(196, (int) Math.round(wUtil * 0.49)));
-        int barraX = PAD_X + chipW + 8;
-        int barraW = Math.max(54, wUtil - chipW - 18 - textoColW);
-        int textoX = barraX + barraW + 10;
-        int textoMaxW = Math.max(60, w - PAD_X - textoX);
+        int padX = TemaCloudForge.escala(PAD_X);
+        int cabH = TemaCloudForge.escala(CABECALHO_H);
+        int altLinha = TemaCloudForge.escala(ALTURA_LINHA);
+        boolean compacto = w < TemaCloudForge.escala(420);
+        int wUtil = Math.max(120, w - padX * 2);
+        int chipW = TemaCloudForge.escala(compacto ? 58 : 74);
+        int textoColW = compacto ? Math.min(TemaCloudForge.escala(198), Math.max(TemaCloudForge.escala(165), wUtil - chipW - 96))
+                                 : Math.min(TemaCloudForge.escala(248), Math.max(TemaCloudForge.escala(200), (int) Math.round(wUtil * 0.45)));
+        int barraX = padX + chipW + TemaCloudForge.escala(8);
+        int barraW = Math.max(54, wUtil - chipW - TemaCloudForge.escala(18) - textoColW);
+        int textoX = barraX + barraW + TemaCloudForge.escala(10);
+        int textoMaxW = Math.max(60, w - padX - textoX);
 
         Font fonteChip = TemaCloudForge.monoBold(compacto ? 9.2f : 9.8f);
         Font fonteMono = TemaCloudForge.mono(compacto ? 9.5f : 10.2f);
         Font fonteMonoBold = TemaCloudForge.monoBold(compacto ? 9.5f : 10.2f);
 
-        int yBase = CABECALHO_H + 5;
+        int yBase = cabH + 5;
         for (int i = 0; i < linhas.size(); i++) {
-            int rowY = yBase + i * ALTURA_LINHA;
-            if (rowY + ALTURA_LINHA > h - 3) break;
-            desenharLinha(g2, linhas.get(i), agora, rowY, chipW, barraX, barraW, textoX, textoMaxW,
+            int rowY = yBase + i * altLinha;
+            if (rowY + altLinha > h - 3) break;
+            desenharLinha(g2, linhas.get(i), agora, rowY, altLinha, padX, chipW, barraX, barraW, textoX, textoMaxW,
                     fonteChip, fonteMono, fonteMonoBold);
         }
 
@@ -353,47 +362,51 @@ public class PainelPrazo extends JPanel implements Animador.Animavel {
     }
 
     private void desenharCabecalho(Graphics2D g2, int w) {
+        int padX = TemaCloudForge.escala(PAD_X);
+        int cabH = TemaCloudForge.escala(CABECALHO_H);
         g2.setFont(TemaCloudForge.sansMedium(11.5f));
+        FontMetrics fmTit = g2.getFontMetrics();
+        int yTxt = (cabH - fmTit.getHeight()) / 2 + fmTit.getAscent();
         g2.setColor(TemaCloudForge.FG);
-        g2.drawString("Prazos e Health Check", PAD_X, 18);
+        g2.drawString("Prazos e Health Check", padX, yTxt);
 
         String legenda = "health 2 s · tarefa 5 s";
         g2.setFont(TemaCloudForge.mono(10f));
         g2.setColor(TemaCloudForge.MUTE);
         FontMetrics fmLeg = g2.getFontMetrics();
-        g2.drawString(legenda, w - PAD_X - fmLeg.stringWidth(legenda), 18);
+        g2.drawString(legenda, w - padX - fmLeg.stringWidth(legenda), yTxt);
 
         g2.setColor(TemaCloudForge.DIVIDER);
-        g2.drawLine(PAD_X, CABECALHO_H, w - PAD_X, CABECALHO_H);
+        g2.drawLine(padX, cabH, w - padX, cabH);
     }
 
     private void desenharEstadoVazio(Graphics2D g2, int w, int h) {
-        int areaTop = CABECALHO_H + 4;
+        int areaTop = TemaCloudForge.escala(CABECALHO_H) + 4;
         int cy = areaTop + (h - areaTop) / 2;
 
         // Ícone geométrico minimalista de relógio/prazo (sem emoji)
-        int r = 9;
+        int r = TemaCloudForge.escala(9);
         int cx = w / 2;
-        int iconeY = cy - 18;
+        int iconeY = cy - TemaCloudForge.escala(18);
         g2.setColor(TemaCloudForge.LINE);
         g2.setStroke(new BasicStroke(1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         g2.drawOval(cx - r, iconeY - r, r * 2, r * 2);
         Path2D.Double ponteiros = new Path2D.Double();
-        ponteiros.moveTo(cx, iconeY - 5);
+        ponteiros.moveTo(cx, iconeY - TemaCloudForge.escala(5));
         ponteiros.lineTo(cx, iconeY);
-        ponteiros.lineTo(cx + 4, iconeY + 2);
+        ponteiros.lineTo(cx + TemaCloudForge.escala(4), iconeY + 2);
         g2.draw(ponteiros);
 
         g2.setFont(TemaCloudForge.sans(12f));
         g2.setColor(TemaCloudForge.MUTE);
         FontMetrics fm = g2.getFontMetrics();
         String titulo = "Nenhuma requisição em andamento";
-        g2.drawString(titulo, (w - fm.stringWidth(titulo)) / 2, cy + 8);
+        g2.drawString(titulo, (w - fm.stringWidth(titulo)) / 2, cy + TemaCloudForge.escala(8));
 
         g2.setFont(TemaCloudForge.mono(10f));
         FontMetrics fmSub = g2.getFontMetrics();
         String sub = "Health Check (2 s) e ExecutarTarefa (5 s) aparecem aqui";
-        g2.drawString(sub, (w - fmSub.stringWidth(sub)) / 2, cy + 24);
+        g2.drawString(sub, (w - fmSub.stringWidth(sub)) / 2, cy + TemaCloudForge.escala(24));
     }
 
     private void desenharLinha(
@@ -401,6 +414,8 @@ public class PainelPrazo extends JPanel implements Animador.Animavel {
             LinhaPrazo linha,
             long agora,
             int rowY,
+            int altLinha,
+            int padX,
             int chipW,
             int barraX,
             int barraW,
@@ -424,17 +439,19 @@ public class PainelPrazo extends JPanel implements Animador.Animavel {
         Graphics2D gl = (Graphics2D) g2.create();
         gl.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
 
-        int cy = rowY + ALTURA_LINHA / 2;
+        int cy = rowY + altLinha / 2;
 
         // 1. Chip da instância
-        desenharChip(gl, linha, PAD_X, rowY + 3, chipW, 16, fonteChip);
+        int hChip = TemaCloudForge.escala(16);
+        desenharChip(gl, linha, padX, cy - hChip / 2, chipW, hChip, fonteChip);
 
         // 2. Barra fina de progresso em relação ao deadline da etapa + marcador do limite
         double razao = calcularRazaoAtual(linha, agora);
-        desenharBarra(gl, linha, razao, barraX, cy - 3, barraW, 6);
+        int hBarra = TemaCloudForge.escala(6);
+        desenharBarra(gl, linha, razao, barraX, cy - hBarra / 2, barraW, hBarra);
 
         // 3. Texto mono e indicador de estado à direita
-        desenharTextoEstado(gl, linha, agora, razao, rowY, cy, textoX, textoMaxW, fonteMono, fonteMonoBold);
+        desenharTextoEstado(gl, linha, agora, razao, rowY, altLinha, cy, textoX, textoMaxW, fonteMono, fonteMonoBold);
 
         gl.dispose();
     }
@@ -519,6 +536,7 @@ public class PainelPrazo extends JPanel implements Animador.Animavel {
             long agora,
             double razao,
             int rowY,
+            int altLinha,
             int cy,
             int textoX,
             int textoMaxW,
@@ -527,7 +545,7 @@ public class PainelPrazo extends JPanel implements Animador.Animavel {
 
         g2.setFont(fonteMono);
         FontMetrics fm = g2.getFontMetrics();
-        int ty = rowY + (ALTURA_LINHA - fm.getHeight()) / 2 + fm.getAscent();
+        int ty = rowY + (altLinha - fm.getHeight()) / 2 + fm.getAscent();
 
         switch (linha.fase) {
             case HEALTH -> {

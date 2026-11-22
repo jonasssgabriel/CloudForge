@@ -73,6 +73,7 @@ public final class Animador {
     private static volatile boolean reduzirAnimacoes = Boolean.getBoolean("awt.reduceMotion");
     private static final List<Animavel> ouvintes = new CopyOnWriteArrayList<>();
     private static final Timer timer = new Timer(16, e -> pulsar());
+    private static boolean acordadoNoPulso = false;
 
     private Animador() {
     }
@@ -105,6 +106,7 @@ public final class Animador {
     }
 
     public static void acordar() {
+        acordadoNoPulso = true;
         if (!timer.isRunning()) {
             timer.start();
         }
@@ -130,6 +132,7 @@ public final class Animador {
     }
 
     private static void pulsar() {
+        acordadoNoPulso = false;
         long agora = System.currentTimeMillis();
         boolean algumAtivo = false;
         for (Animavel a : ouvintes) {
@@ -137,7 +140,7 @@ public final class Animador {
                 algumAtivo = true;
             }
         }
-        if (!algumAtivo) {
+        if (!algumAtivo && !acordadoNoPulso) {
             timer.stop();
         }
     }
