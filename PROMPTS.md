@@ -64,3 +64,13 @@ Ferramenta usada: Claude Code, com outros agentes orquestrados via Orca (subagen
 - Deadlines: https://grpc.io/docs/guides/deadlines/
 - Cancelamento: https://grpc.io/docs/guides/cancellation/
 - Códigos de status: https://grpc.io/docs/guides/status-codes/
+
+## Rodada final: revisão, planejamento da tela e integração
+
+| Agente (modelo) | Prompt, em resumo | O que foi aceito | O que foi mudado ou recusado |
+|---|---|---|---|
+| Codex (GPT-6 Astra) | Auditar o código contra o PDF, achar condições de corrida e falhas de borda, corrigir só o que fosse bug real e testar com processos reais | Contagem de uso dos canais no cliente, validação de entradas e de atraso/limite, ordem de encerramento do servidor, 15 perguntas difíceis e roteiro de 5 minutos | Foi pedido para não reescrever o que já funcionava; as correções ficaram pequenas e comentadas |
+| Codex (GPT-6.1 Sol) | Planejar o "momento uau" da tela mostrando os conceitos do trabalho, sem dado inventado | Trilha por requisição, barra de deadline, estado local por instância; apontou que a animação da concorrência usava ids e latências inventados | Cortados: botões que derrubam processos e redesenho total |
+| Antigravity (Gemini 4 Neon) | Polir a tela: colunas sem truncar, hierarquia, contraste, animações com um único Timer | Layout responsivo, sparklines, toasts, atalhos | Recusados: efeitos de brilho e elementos decorativos |
+| Antigravity (Gemini 4 Neon) | Criar `PainelEstadoLocal` e `PainelPrazo` como componentes isolados | Os dois painéis, depois integrados com eventos reais | Integração feita por um único agente, para evitar edição simultânea |
+
